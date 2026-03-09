@@ -1,83 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="style.css">
-    <title>Weather App Ui Design | AsmrProg</title>
+    <title>Dynamic Weather App</title>
 </head>
-
 <body>
 
-    <div class="container">
-        <div class="left-info">
-            <div class="pic-gradient"></div>
-            <div class="today-info">
-                <h2>Friday</h2>
-                <span>28 July 2023</span>
-                <div>
-                    <i class='bx bx-current-location'></i>
-                    <span>Paris, FR</span>
-                </div>
-            </div>
-            <div class="today-weather">
-                <i class='bx bx-sun'></i>
-                <h1 class="weather-temp">
-                    25°C
-                </h1>
-                <h3>Sunny</h3>
+<div class="container">
+    <div class="left-info">
+        <div class="pic-gradient"></div>
+        <div class="today-info">
+            <h2 id="day-name">---</h2>
+            <span id="date-today">---</span>
+            <div>
+                <i class='bx bx-current-location'></i>
+                <span id="location-name">Search a City</span>
             </div>
         </div>
-
-        <div class="right-info">
-            <div class="day-info">
-                <div>
-                    <span class="title">PRECIPITATION</span>
-                    <span class="value">4 %</span>
-                </div>
-                <div>
-                    <span class="title">HUMIDITY</span>
-                    <span class="value">34 %</span>
-                </div>
-                <div>
-                    <span class="title">WIND SPEED</span>
-                    <span class="value">6 km/h</span>
-                </div>
-            </div>
-
-            <ul class="days-list">
-                <li>
-                    <i class='bx bx-cloud'></i>
-                    <span>Sat</span>
-                    <span class="day-temp">23°C</span>
-                </li>
-                <li>
-                    <i class='bx bx-sun'></i>
-                    <span>Sun</span>
-                    <span class="day-temp">28°C</span>
-                </li>
-                <li>
-                    <i class='bx bx-cloud-rain'></i>
-                    <span>Mon</span>
-                    <span class="day-temp">02°C</span>
-                </li>
-                <li>
-                    <i class='bx bx-cloud-drizzle'></i>
-                    <span>Tue</span>
-                    <span class="day-temp">14°C</span>
-                </li>
-            </ul>
-
-            <div class="btn-container">
-                <button class="loc-button">Search Location</button>
-            </div>
-
+        <div class="today-weather">
+            <i id="main-icon" class='bx bx-sun'></i>
+            <h1 class="weather-temp" id="main-temp">--°C</h1>
+            <h3 id="weather-desc">---</h3>
         </div>
-
     </div>
 
-</body>
+    <div class="right-info">
+        <div class="day-info">
+            <div>
+                <span class="title">WIND SPEED</span>
+                <span class="value" id="wind-speed">-- km/h</span>
+            </div>
+            <div>
+                <span class="title">WEATHER CODE</span>
+                <span class="value" id="weather-code">--</span>
+            </div>
+        </div>
 
+        <ul class="days-list" id="days-list">
+            <li><i class='bx bx-cloud'></i><span>---</span><span class="day-temp">--°C</span></li>
+            <li><i class='bx bx-sun'></i><span>---</span><span class="day-temp">--°C</span></li>
+            <li><i class='bx bx-cloud-rain'></i><span>---</span><span class="day-temp">--°C</span></li>
+            <li><i class='bx bx-cloud-drizzle'></i><span>---</span><span class="day-temp">--°C</span></li>
+        </ul>
+
+        <div class="btn-container">
+            <input type="text" id="cityInput" placeholder="Enter city..." style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 10px; border: none; outline: none; background: #37474f; color: white;">
+            <button class="loc-button" onclick="searchCity()">Search Location</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Helper to get the correct icon class based on weather code
+    function getIconClass(code) {
+        if (code === 0) return 'bx-sun';
+        if (code <= 3) return 'bx-cloud';
+        if (code >= 51 && code <= 67) return 'bx-cloud-drizzle';
+        if (code >= 71 && code <= 77) return 'bx-cloud-snow';
+        return 'bx-cloud-rain';
+    }
+
+    function searchCity() {
+        const city = document.getElementById("cityInput").value;
+        if (!city) return alert("Please enter a city");
+
+        const geoXhr = new XMLHttpRequest();
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=en&format=json`;
+
+        geoXhr.open("GET", geoUrl, true);
+        geoXhr.onreadystatechange = function() {
+            if (geoXhr.readyState === 4 && geoXhr.status === 200) {
+                const geoData = JSON.parse(geoXhr.responseText);
+                if (geoData.results && geoData.results.length > 0) {
+                    const loc = geoData.results[0];
+                    fetchWeather(loc.latitude, loc.longitude, loc.name + ", " + (loc.country_code || ""));
+                } else {
+                    alert("City not found");
+                }
+            }
+        };
+        geoXhr.send();
+    }
+
+    function fetchWeather(lat, lon, fullName) {
+        const weatherXhr = new XMLHttpRequest();
+        // We request 'daily' max temperatures and weather codes for the forecast
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max&timezone=auto`;
+
+        weatherXhr.open("GET", url, true);
+        weatherXhr.onreadystatechange = function() {
+            if (weatherXhr.readyState === 4 && weatherXhr.status === 200) {
+                const data = JSON.parse(weatherXhr.responseText);
+                
+                // 1. Update Current Weather UI
+                const current = data.current_weather;
+                document.getElementById("location-name").innerText = fullName;
+                document.getElementById("main-temp").innerText = Math.round(current.temperature) + "°C";
+                document.getElementById("wind-speed").innerText = current.windspeed + " km/h";
+                document.getElementById("weather-code").innerText = current.weathercode;
+                
+                // 2. Update Today's Date
+                const now = new Date();
+                document.getElementById("day-name").innerText = now.toLocaleDateString('en-US', { weekday: 'long' });
+                document.getElementById("date-today").innerText = now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                updateMainWeatherUI(current.weathercode);
+
+                // 3. Update 4-Day Forecast accurately
+                const forecastList = document.getElementById("days-list");
+                forecastList.innerHTML = ""; // Clear existing static <li> items
+
+                // Index 0 is today, so we start from Index 1 for the 4-day forecast
+                for (let i = 1; i <= 4; i++) {
+                    const dateStr = data.daily.time[i];
+                    const tempMax = Math.round(data.daily.temperature_2m_max[i]);
+                    const wCode = data.daily.weathercode[i];
+                    
+                    // Format the day name (e.g., "Mon")
+                    const forecastDate = new Date(dateStr);
+                    const dayName = forecastDate.toLocaleDateString('en-US', { weekday: 'short' });
+
+                    // Create new <li> element
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                        <i class='bx ${getIconClass(wCode)}'></i>
+                        <span>${dayName}</span>
+                        <span class="day-temp">${tempMax}°C</span>
+                    `;
+                    forecastList.appendChild(li);
+                }
+            }
+        };
+        weatherXhr.send();
+    }
+
+    function updateMainWeatherUI(code) {
+        const iconEl = document.getElementById("main-icon");
+        const descEl = document.getElementById("weather-desc");
+        iconEl.className = 'bx ' + getIconClass(code);
+        
+        if (code === 0) descEl.innerText = "Clear Sky";
+        else if (code <= 3) descEl.innerText = "Partly Cloudy";
+        else if (code >= 51 && code <= 67) descEl.innerText = "Drizzle";
+        else descEl.innerText = "Rainy";
+    }
+</script>
+</body>
 </html>
